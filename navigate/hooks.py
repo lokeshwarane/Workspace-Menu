@@ -26,8 +26,12 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/navigate/css/navigate.css"
-# app_include_js = "/assets/navigate/js/navigate.js"
-
+app_include_js = [
+    "/assets/navigate/js/workspace_navbar.js"
+]
+fixtures = [
+    {"dt": "DocType", "filters": [["name", "in", ["Navbar items", "Navbar item child"]]]},
+]
 # include js, css files in header of web template
 # web_include_css = "/assets/navigate/css/navigate.css"
 # web_include_js = "/assets/navigate/js/navigate.js"
