@@ -1,11 +1,7 @@
-// Track last clicked URL item name
-let _activeUrlItem = null;
-
 frappe.inject_workspace_navbar = function () {
 	$('.custom-workspace-navbar').remove();
-	$('.custom-menu-btn').remove();
-	$('.page-head').css('overflow', 'visible');
-	$('.page-head-content').css('overflow', 'visible');
+	$('.custom-navbar-toggle').remove();
+	$('.custom-navbar-slide-panel').remove();
 
 	if (!$('.page-title').length) return;
 
@@ -13,9 +9,9 @@ frappe.inject_workspace_navbar = function () {
 		method: 'frappe.client.get_list',
 		args: {
 			doctype: 'Navbar items',
-			fields: ['name', 'labele', 'linktype', 'linkto', 'url', 'child'],
+			fields: ['name', 'labele', 'linktype', 'linkto', 'url', 'child', 'icons', 'icon', 'icon_image'],
 			order_by: 'creation asc',
-			limit: 100,
+			limit_page_length: 0,
 		},
 		callback: function (r) {
 			if (!r.message) return;
@@ -37,18 +33,34 @@ frappe.inject_workspace_navbar = function () {
 	});
 };
 
+// Render icon HTML
+function _renderIcon(icons, icon, icon_image) {
+	if (icons === 'Upload icon' && icon_image) {
+		return `<img src="${icon_image}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;">`;
+	} else if (icons === 'In-built frappe icon' && icon) {
+		return frappe.utils.icon(icon, 'sm');
+	}
+	return '•';
+}
+
+// Safe slug — never crashes on null/undefined
+function _slug(str) {
+	if (!str) return '';
+	return frappe.router.slug(str);
+}
+
 // Resolve any link type to its full href
 function _resolveHref(linktype, linkto, url) {
 	if (!linktype) return '#';
 	if (linktype === 'URL') return url || '#';
 	if (!linkto) return '#';
 	switch (linktype) {
-		case 'DocType':   return `/app/${frappe.router.slug(linkto)}`;
-		case 'Page':      return `/app/${frappe.router.slug(linkto)}`;
-		case 'Workspace': return `/app/${frappe.router.slug(linkto)}`;
+		case 'DocType':   return `/app/${_slug(linkto)}`;
+		case 'Page':      return `/app/${_slug(linkto)}`;
+		case 'Workspace': return `/app/${_slug(linkto)}`;
 		case 'Dashboard': return `/app/dashboard-view/${encodeURIComponent(linkto)}`;
 		case 'Report':    return `/app/query-report/${encodeURIComponent(linkto)}`;
-		default:          return `/app/${frappe.router.slug(linkto)}`;
+		default:          return `/app/${_slug(linkto)}`;
 	}
 }
 
@@ -56,193 +68,230 @@ function _resolveHref(linktype, linkto, url) {
 function _isCurrentPage(href) {
 	if (!href || href === '#') return false;
 	const fullPath = window.location.pathname;
-	if (href.startsWith('http://') || href.startsWith('https://')) return false;
-	return fullPath.includes(href.replace('/app/', ''));
+	try {
+		const parsed = new URL(href);
+		return fullPath.includes(parsed.pathname.replace('/app/', '').replace('/desk/', ''));
+	} catch(e) {
+		return fullPath.includes(href.replace('/app/', '').replace('/desk/', ''));
+	}
 }
 
 function _renderNavbar(navItems) {
 	const fullPath = window.location.pathname;
 
-	// Check if current page belongs to any navbar item
-	function isNavbarPage() {
-		return navItems.some(item => {
-			if (item.child) {
-				return (item._children || []).some(c => {
-					if (c.link_type === 'URL') {
-						// Match internal URL against current path
-						const url = c.urll || '';
-						if (!url || url.startsWith('http://') || url.startsWith('https://')) return false;
-						return fullPath.includes(url.replace('/app/', ''));
-					}
-					return _isCurrentPage(_resolveHref(c.link_type, c.link, c.urll));
-				});
-			} else {
-				if (item.linktype === 'URL') {
-					// Match internal URL against current path
-					const url = item.url || '';
-					if (!url || url.startsWith('http://') || url.startsWith('https://')) return false;
-					return fullPath.includes(url.replace('/app/', ''));
-				}
-				return _isCurrentPage(_resolveHref(item.linktype, item.linkto, item.url));
-			}
-		});
+	function _extractPath(url) {
+		if (!url) return null;
+		try { return new URL(url).pathname; }
+		catch (e) { return url; }
 	}
 
-	const isWorkspacePage = isNavbarPage();
+	// Build navbar items HTML
+	function _buildNavItemsHTML(prefix, forSlide) {
+		prefix = prefix || '';
+		let html = '';
 
-	// Build dropdown groups (child = 1 items)
-	let dropdownGroupsHTML = '';
+		navItems.forEach(item => {
+			if (item.child) {
+				const children = item._children || [];
+				const safeId   = item.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+				const dropId   = `${prefix}navbar-btn-${safeId}`;
+				const menuId   = `${prefix}navbar-menu-${safeId}`;
+				const isActive = children.some(c => _isCurrentPage(_resolveHref(c.link_type, c.link, c.urll)));
+				const iconHTML = _renderIcon(item.icons, item.icon, item.icon_image);
+				// inside slide panel use absolute, inside inline navbar use fixed
+				const menuPos  = forSlide ? 'absolute' : 'fixed';
 
-	navItems.filter(item => item.child).forEach(item => {
-		const children = item._children || [];
-		const safeId   = item.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-		const dropId   = `navbar-btn-${safeId}`;
-		const menuId   = `navbar-menu-${safeId}`;
+				const dropdownLinks = children.map(c => {
+					const href          = _resolveHref(c.link_type, c.link, c.urll);
+					const isChildActive = _isCurrentPage(href);
+					const childIcon     = _renderIcon(c.icons, c.icon, c.icon_image);
+					return `
+						<a href="${href}" title="${c.label}"
+						   style="display:flex;align-items:center;justify-content:center;
+						          padding:7px 14px;text-decoration:none;
+						          color:var(--text-color);"
+						   onmouseover="this.style.background='var(--fg-color)'"
+						   onmouseout="this.style.background='transparent'">
+						   ${childIcon}
+						</a>`;
+				}).join('');
 
-		const isActive = children.some(c => {
-			const href = _resolveHref(c.link_type, c.link, c.urll);
-			// For URL type, highlight based on last clicked
-			if (c.link_type === 'URL') return _activeUrlItem === c.name;
-			return _isCurrentPage(href);
+				html += `
+					<div style="position:relative;display:inline-block;">
+						<button id="${dropId}" title="${item.labele}"
+						   style="display:flex;align-items:center;gap:4px;padding:5px 10px;
+						          border-radius:6px;font-size:12px;font-weight:500;
+						          cursor:pointer;white-space:nowrap;
+						          border:0.5px solid transparent;
+						          color:var(--text-color);
+						          background:transparent;">
+							${iconHTML}
+							<span style="font-size:10px;">▾</span>
+						</button>
+						<div id="${menuId}"
+						   style="display:none;position:${menuPos};z-index:9999;
+						          top:100%;left:0;
+						          background:var(--fg-color);
+						          border:0.5px solid var(--border-color);border-radius:6px;
+						          box-shadow:0 4px 12px rgba(0,0,0,0.1);min-width:56px;padding:4px 0;">
+							${dropdownLinks}
+						</div>
+					</div>`;
+			} else {
+				const href     = _resolveHref(item.linktype, item.linkto, item.url);
+				const isActive = item.linktype === 'URL'
+					? (() => { const p = _extractPath(item.url); return p ? fullPath.includes(p.replace('/app/','').replace('/desk/','')) : false; })()
+					: _isCurrentPage(href);
+				const iconHTML = _renderIcon(item.icons, item.icon, item.icon_image);
+				const width    = forSlide ? 'calc((100% - 54px) / 10)' : 'auto';
+
+				html += `
+					<a href="${href}" title="${item.labele}"
+					   style="display:flex;align-items:center;justify-content:center;
+					          padding:5px 10px;border-radius:6px;text-decoration:none;
+					          white-space:nowrap;width:${width};
+					          color:var(--text-color);
+					          background:transparent;
+					          border:0.5px solid transparent;"
+					   onmouseover="this.style.background='var(--fg-color)'"
+					   onmouseout="this.style.background='transparent'">
+					   ${iconHTML}
+					</a>`;
+			}
 		});
 
-		const dropdownLinks = children.map(c => {
-			const href = _resolveHref(c.link_type, c.link, c.urll);
-			const isChildActive = c.link_type === 'URL'
-				? _activeUrlItem === c.name
-				: _isCurrentPage(href);
-			return `
-				<a href="${href}"
-				   data-item-name="${c.name}"
-				   data-is-url="${c.link_type === 'URL' ? '1' : '0'}"
-				   style="display:block;padding:7px 14px;font-size:12px;font-weight:500;
-				          text-decoration:none;
-				          color:${isChildActive ? '#5c6ac4' : 'var(--text-color)'};
-				          white-space:nowrap;font-weight:${isChildActive ? '700' : '500'};"
-				   onmouseover="this.style.background='var(--fg-color)'"
-				   onmouseout="this.style.background='transparent'">
-				   ${c.label}
-				</a>`;
-		}).join('');
+		return html;
+	}
 
-		dropdownGroupsHTML += `
-			<div style="position:relative;display:inline-block;">
-				<button id="${dropId}"
-				   style="padding:5px 12px;border-radius:6px;font-size:12px;font-weight:500;
-				          cursor:pointer;white-space:nowrap;
-				          border:0.5px solid ${isActive ? '#5c6ac4' : 'transparent'};
-				          color:${isActive ? '#fff' : 'var(--text-color)'};
-				          background:${isActive ? '#5c6ac4' : 'transparent'};">
-					${item.labele} ▾
-				</button>
-				<div id="${menuId}"
-				   style="display:none;position:fixed;z-index:9999;background:var(--fg-color);
-				          border:0.5px solid var(--border-color);border-radius:6px;
-				          box-shadow:0 4px 12px rgba(0,0,0,0.1);min-width:160px;padding:4px 0;">
-					${dropdownLinks}
-				</div>
-			</div>`;
-	});
-
-	// Build plain tabs (child = 0)
-	const tabs = navItems.filter(item => !item.child).map(item => {
-		const href = _resolveHref(item.linktype, item.linkto, item.url);
-		// For URL type, highlight based on last clicked
-		const isActive = item.linktype === 'URL'
-			? _activeUrlItem === item.name
-			: _isCurrentPage(href);
-		return `
-			<a href="${href}"
-			   data-item-name="${item.name}"
-			   data-is-url="${item.linktype === 'URL' ? '1' : '0'}"
-			   style="padding:5px 12px;border-radius:6px;font-size:12px;font-weight:500;
-			          text-decoration:none;white-space:nowrap;
-			          color:${isActive ? '#fff' : 'var(--text-color)'};
-			          background:${isActive ? '#5c6ac4' : 'transparent'};
-			          border:0.5px solid ${isActive ? '#5c6ac4' : 'transparent'};"
-			   onmouseover="this.style.background='${isActive ? '#5c6ac4' : 'var(--fg-color)'}';this.style.color='${isActive ? '#fff' : 'var(--text-color)'}'"
-			   onmouseout="this.style.background='${isActive ? '#5c6ac4' : 'transparent'}';this.style.color='${isActive ? '#fff' : 'var(--text-color)'}'"
-			>${item.labele}</a>`;
-	}).join('');
-
-	// Navbar HTML
-	const navbarHTML = `
-		<div class="custom-workspace-navbar"
-		     style="display:flex;align-items:center;gap:4px;padding:6px 16px;
-		            background:var(--navbar-bg);border-bottom:1px solid var(--border-color);overflow:visible;">
-			${dropdownGroupsHTML}
-			${tabs}
-		</div>`;
-
-	// Bind dropdown toggles + URL click tracking
-	function bindDropdowns() {
-		navItems.filter(i => i.child).forEach(item => {
-			const safeId = item.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-			const dropId = `navbar-btn-${safeId}`;
-			const menuId = `navbar-menu-${safeId}`;
-
-			$('#' + dropId).off('click').on('click', function (e) {
+	// Bind dropdown toggles
+	function _bindDropdowns(prefix, forSlide) {
+		prefix = prefix || '';
+		$(`[id^="${prefix}navbar-btn-"]`).each(function () {
+			const dropId = $(this).attr('id');
+			const menuId = dropId.replace('-btn-', '-menu-');
+			$(this).off('click').on('click', function (e) {
 				e.stopPropagation();
-				const btn    = $(this);
-				const offset = btn.offset();
-				const height = btn.outerHeight();
-				$('#' + menuId).css({ top: offset.top + height, left: offset.left }).toggle();
+				const $menu = $('#' + menuId);
+				if (forSlide) {
+					// position:absolute — just toggle, CSS top:100% handles placement
+					$menu.toggle();
+				} else {
+					const btn    = $(this);
+					const offset = btn.offset();
+					const height = btn.outerHeight();
+					$menu.css({ top: offset.top + height, left: offset.left }).toggle();
+				}
 			});
 		});
-
-		// Track clicks on URL type items to highlight them
-		$('.custom-workspace-navbar a[data-is-url="1"]').off('click.urltrack').on('click.urltrack', function () {
-			_activeUrlItem = $(this).data('item-name');
-		});
-		$('.custom-workspace-navbar a[data-is-url="0"]').off('click.urltrack').on('click.urltrack', function () {
-			_activeUrlItem = null;
-		});
 	}
 
-	$(document).off('click.navbar-dropdowns').on('click.navbar-dropdowns', function () {
-		$('[id^="navbar-menu-"]').hide();
-	});
+	setTimeout(function () {
+		const doesFit = navItems.length <= 10;
 
-	if (isWorkspacePage) {
-		$('.page-title').after(navbarHTML);
-		bindDropdowns();
+		if (doesFit) {
+			// Inject inline after page title inside the page head
+			$('.page-title').after(`
+				<div class="custom-workspace-navbar"
+				     style="display:flex;align-items:center;gap:4px;
+				            overflow:visible;flex-wrap:nowrap;flex-shrink:0;">
+					${_buildNavItemsHTML('', false)}
+				</div>`);
+			_bindDropdowns('', false);
 
-		$(document).on('click.accounting-dropdown', function () {
-			$('[id^="navbar-menu-"]').hide();
-		});
+		} else {
+			// Append slide panel to body (fixed position)
+			$('body').append(`
+				<div class="custom-navbar-slide-panel"
+				     style="display:none;position:fixed;
+				            width:600px;z-index:10000;
+				            background:var(--fg-color);
+				            box-shadow:0 8px 24px rgba(0,0,0,0.18);
+				            border-radius:12px;
+				            border:1px solid var(--border-color);
+				            padding:12px 16px;
+				            flex-wrap:wrap;gap:6px;
+				            overflow:visible;">
+					${_buildNavItemsHTML('slide-', true)}
+				</div>`);
 
-	} else {
-		const menuBtn = $(`
-			<button class="custom-menu-btn"
-			   style="padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;
-			          cursor:pointer;white-space:nowrap;border:0.5px solid var(--border-color);
-			          color:var(--text-color);background:transparent;margin-right:8px;">
-				☰ Menu
-			</button>`);
+			// Place toggle button before .page-actions in the page head
+			$('.page-actions').before(`
+				<button class="custom-navbar-toggle"
+				   style="display:flex;align-items:center;justify-content:center;
+				          padding:4px 8px;border-radius:6px;cursor:pointer;
+				          border:1px solid var(--border-color);
+				          background:var(--fg-color);
+				          font-size:16px;line-height:1;
+				          color:var(--text-color);margin-right:8px;">
+					&#8964;
+				</button>`);
 
-		if ($('.page-actions').length) {
-			$('.page-actions').prepend(menuBtn);
+			_bindDropdowns('slide-', true);
+
+			let slideOpen = false;
+
+			function openPanel() {
+				const $panel  = $('.custom-navbar-slide-panel');
+				const $btn    = $('.custom-navbar-toggle');
+				const btnRect = $btn[0].getBoundingClientRect();
+				// Position box to the left of the button, aligned with button top
+				const topPos  = btnRect.top;
+				const leftPos = Math.max(8, btnRect.left - 608);
+
+				// Set initial hidden state
+				$panel.css({
+					top:       topPos + 'px',
+					left:      leftPos + 'px',
+					opacity:   '0',
+					transform: 'translateY(-10px)',
+					display:   'flex',
+				});
+
+				// Trigger transition after next paint
+				setTimeout(() => {
+					$panel.css({
+						transition: 'transform 0.3s ease, opacity 0.3s ease',
+						transform:  'translateY(0)',
+						opacity:    '1',
+					});
+				}, 20);
+
+				$('.custom-navbar-toggle').html('&#8963;');
+				slideOpen = true;
+			}
+
+			function closePanel() {
+				const $panel = $('.custom-navbar-slide-panel');
+				$panel.css({
+					transition: 'transform 0.3s ease, opacity 0.3s ease',
+					transform:  'translateY(-10px)',
+					opacity:    '0',
+				});
+				setTimeout(() => {
+					$panel.css({ display: 'none', transition: 'none' });
+				}, 310);
+				$('.custom-navbar-toggle').html('&#8964;');
+				slideOpen = false;
+			}
+
+			$('.custom-navbar-toggle').off('click').on('click', function (e) {
+				e.stopPropagation();
+				slideOpen ? closePanel() : openPanel();
+			});
+
+			$(document).off('click.slide-panel').on('click.slide-panel', function (e) {
+				if (slideOpen && !$(e.target).closest('.custom-navbar-slide-panel,.custom-navbar-toggle').length) {
+					closePanel();
+				}
+			});
 		}
 
-		const navbar = $(navbarHTML).css({
-			position: 'fixed', top: '0', left: '0', right: '0',
-			'z-index': '9998', 'box-shadow': '0 4px 16px rgba(0,0,0,0.2)',
-		}).hide();
-		$('body').append(navbar);
-
-		menuBtn.on('click', function (e) {
-			e.stopPropagation();
-			navbar.slideToggle(200);
-			bindDropdowns();
+		$(document).off('click.navbar-dropdowns').on('click.navbar-dropdowns', function () {
+			$('[id^="navbar-menu-"]').hide();
+			$('[id^="slide-navbar-menu-"]').hide();
 		});
 
-		$(document).on('click.custom-menu', function (e) {
-			if (!$(e.target).closest('.custom-workspace-navbar, .custom-menu-btn').length) {
-				navbar.slideUp(200);
-				$('[id^="navbar-menu-"]').hide();
-			}
-		});
-	}
+	}, 150);
 }
 
 // Boot

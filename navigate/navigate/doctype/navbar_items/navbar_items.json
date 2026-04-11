@@ -12,23 +12,17 @@
   "linktype",
   "linkto",
   "url",
-  "add_navbar_field",
-  "amended_from"
+  "column_break_ixnu",
+  "icons",
+  "icon",
+  "icon_image",
+  "section_break_fhku",
+  "add_navbar_field"
  ],
  "fields": [
   {
    "fieldname": "section_break_ziwb",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Navbar items",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
   },
   {
    "fieldname": "labele",
@@ -68,12 +62,38 @@
    "fieldname": "url",
    "fieldtype": "Data",
    "label": "URL"
+  },
+  {
+   "fieldname": "column_break_ixnu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "icons",
+   "fieldtype": "Select",
+   "label": "Icon",
+   "options": "In-built frappe icon\nUpload icon"
+  },
+  {
+   "depends_on": "eval:doc.icons == \"In-built frappe icon\" ",
+   "fieldname": "icon",
+   "fieldtype": "Icon",
+   "label": "Frappe icons"
+  },
+  {
+   "depends_on": "eval:doc.icons == \"Upload icon\"",
+   "fieldname": "icon_image",
+   "fieldtype": "Attach Image",
+   "label": "Upload icon"
+  },
+  {
+   "fieldname": "section_break_fhku",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-08 16:57:35.778922",
+ "modified": "2026-04-10 12:14:51.159257",
  "modified_by": "Administrator",
  "module": "Navigate",
  "name": "Navbar items",

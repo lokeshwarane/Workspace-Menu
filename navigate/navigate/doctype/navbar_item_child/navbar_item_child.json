@@ -9,7 +9,10 @@
   "label",
   "link_type",
   "link",
-  "urll"
+  "urll",
+  "icons",
+  "icon",
+  "icon_image"
  ],
  "fields": [
   {
@@ -26,7 +29,7 @@
    "options": "DocType\nPage\nReport\nWorkspace\nDashboard\nURL"
   },
   {
-   "depends_on": "eval:doc.link_type != \"URL\" && doc.linktype",
+   "depends_on": "eval:doc.link_type != \"URL\" && doc.link_type",
    "fieldname": "link",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
@@ -40,13 +43,31 @@
    "in_list_view": 1,
    "label": "URL",
    "placeholder": "URL"
+  },
+  {
+   "fieldname": "icons",
+   "fieldtype": "Select",
+   "label": "Icon",
+   "options": "In-built frappe icon\nUpload icon"
+  },
+  {
+   "depends_on": "eval:doc.icons == \"In-built frappe icon\"",
+   "fieldname": "icon",
+   "fieldtype": "Icon",
+   "label": "Frappe icons"
+  },
+  {
+   "depends_on": "eval:doc.icons == \"Upload icon\"",
+   "fieldname": "icon_image",
+   "fieldtype": "Attach Image",
+   "label": "Upload icon"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-08 16:57:35.720398",
+ "modified": "2026-04-10 12:08:54.840802",
  "modified_by": "Administrator",
  "module": "Navigate",
  "name": "Navbar item child",
