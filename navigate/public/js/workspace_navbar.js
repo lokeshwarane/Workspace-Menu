@@ -85,7 +85,6 @@ function _renderNavbar(navItems) {
 		catch (e) { return url; }
 	}
 
-	// Build navbar items HTML
 	function _buildNavItemsHTML(prefix, forSlide) {
 		prefix = prefix || '';
 		let html = '';
@@ -98,7 +97,6 @@ function _renderNavbar(navItems) {
 				const menuId   = `${prefix}navbar-menu-${safeId}`;
 				const isActive = children.some(c => _isCurrentPage(_resolveHref(c.link_type, c.link, c.urll)));
 				const iconHTML = _renderIcon(item.icons, item.icon, item.icon_image);
-				// inside slide panel use absolute, inside inline navbar use fixed
 				const menuPos  = forSlide ? 'absolute' : 'fixed';
 
 				const dropdownLinks = children.map(c => {
@@ -163,7 +161,6 @@ function _renderNavbar(navItems) {
 		return html;
 	}
 
-	// Bind dropdown toggles
 	function _bindDropdowns(prefix, forSlide) {
 		prefix = prefix || '';
 		$(`[id^="${prefix}navbar-btn-"]`).each(function () {
@@ -173,7 +170,6 @@ function _renderNavbar(navItems) {
 				e.stopPropagation();
 				const $menu = $('#' + menuId);
 				if (forSlide) {
-					// position:absolute — just toggle, CSS top:100% handles placement
 					$menu.toggle();
 				} else {
 					const btn    = $(this);
@@ -189,7 +185,6 @@ function _renderNavbar(navItems) {
 		const doesFit = navItems.length <= 10;
 
 		if (doesFit) {
-			// Inject inline after page title inside the page head
 			$('.page-title').after(`
 				<div class="custom-workspace-navbar"
 				     style="display:flex;align-items:center;gap:4px;
@@ -199,7 +194,6 @@ function _renderNavbar(navItems) {
 			_bindDropdowns('', false);
 
 		} else {
-			// Append slide panel to body (fixed position)
 			$('body').append(`
 				<div class="custom-navbar-slide-panel"
 				     style="display:none;position:fixed;
@@ -214,7 +208,6 @@ function _renderNavbar(navItems) {
 					${_buildNavItemsHTML('slide-', true)}
 				</div>`);
 
-			// Place toggle button before .page-actions in the page head
 			$('.page-actions').before(`
 				<button class="custom-navbar-toggle"
 				   style="display:flex;align-items:center;justify-content:center;
@@ -234,11 +227,9 @@ function _renderNavbar(navItems) {
 				const $panel  = $('.custom-navbar-slide-panel');
 				const $btn    = $('.custom-navbar-toggle');
 				const btnRect = $btn[0].getBoundingClientRect();
-				// Position box to the left of the button, aligned with button top
 				const topPos  = btnRect.top;
 				const leftPos = Math.max(8, btnRect.left - 608);
 
-				// Set initial hidden state
 				$panel.css({
 					top:       topPos + 'px',
 					left:      leftPos + 'px',
@@ -247,7 +238,6 @@ function _renderNavbar(navItems) {
 					display:   'flex',
 				});
 
-				// Trigger transition after next paint
 				setTimeout(() => {
 					$panel.css({
 						transition: 'transform 0.3s ease, opacity 0.3s ease',
@@ -300,5 +290,29 @@ frappe.after_ajax(function () {
 
 	$(document).on('page-change', function () {
 		setTimeout(() => frappe.inject_workspace_navbar(), 500);
+	});
+});
+
+// Add ERPNext module icons to icon picker
+$(document).on('mouseenter', '.icon-picker', function() {
+	const icon_wrapper = $(this).find('.icons');
+	if (icon_wrapper.find('.erpnext-icon-wrapper').length) return;
+
+	const icons = [
+		'taxes', 'support', 'subscription', 'subcontracting',
+		'stock', 'selling', 'share_management', 'quality',
+		'projects', 'payments', 'organization', 'manufacturing',
+		'invoicing', 'financial_reports', 'erpnext_settings',
+		'crm', 'buying', 'budget', 'banking', 'assets', 'accounts_setup'
+	];
+
+	icons.forEach(icon => {
+		const $icon = $(`
+			<div id="erpnext-${icon}" class="icon-wrapper erpnext-icon-wrapper" title="${icon}">
+				<img src="/assets/erpnext/icons/desktop_icons/solid/${icon}.svg"
+				     style="width:18px;height:18px;">
+			</div>
+		`);
+		icon_wrapper.prepend($icon);
 	});
 });
