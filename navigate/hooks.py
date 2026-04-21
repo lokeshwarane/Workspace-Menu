@@ -26,7 +26,13 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/navigate/css/navigate.css"
-# app_include_js = "/assets/navigate/js/navigate.js"
+# navigate/hooks.py
+# modules/apps/navigate/navigate/hooks.py
+
+app_include_js = [
+    "/assets/navigate/js/bread_crumb.js",
+    "/assets/navigate/js/task.js"
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/navigate/css/navigate.css"
