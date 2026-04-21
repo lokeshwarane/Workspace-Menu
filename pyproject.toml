@@ -1,9 +1,17 @@
 [project]
+<<<<<<< HEAD
 name = "breadcrumb"
 authors = [
     { name = "yunoosh", email = "yyunoosh@gmail.com"}
 ]
 description = "NAvigation bar"
+=======
+name = "navigate"
+authors = [
+    { name = "yun", email = "un@gmail.com"}
+]
+description = "end"
+>>>>>>> d132d320bdd0b47fddae3ad464d39790edeb0ed5
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]

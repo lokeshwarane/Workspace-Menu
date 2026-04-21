@@ -1,6 +1,10 @@
 ### Navigate
 
+<<<<<<< HEAD
 NAvigation bar
+=======
+end
+>>>>>>> d132d320bdd0b47fddae3ad464d39790edeb0ed5
 
 ### Installation
 
@@ -31,4 +35,7 @@ Pre-commit is configured to use the following tools for checking and formatting 
 ### License
 
 mit
+<<<<<<< HEAD
 # Bread-Crumb
+=======
+>>>>>>> d132d320bdd0b47fddae3ad464d39790edeb0ed5
