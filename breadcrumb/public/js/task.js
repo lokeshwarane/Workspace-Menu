@@ -1,0 +1,7 @@
+// navigate/public/js/task.js
+
+frappe.ui.form.on("Task", {
+    refresh(frm) {
+        navigate.breadcrumb.set_project_label(frm);
+    },
+});

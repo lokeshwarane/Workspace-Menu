@@ -1,5 +1,5 @@
-app_name = "navigate"
-app_title = "Navigate"
+app_name = "breadcrumb"
+app_title = "Breadcrumb"
 app_publisher = "yunoosh"
 app_description = "NAvigation bar"
 app_email = "yyunoosh@gmail.com"
@@ -30,8 +30,8 @@ app_license = "mit"
 # modules/apps/navigate/navigate/hooks.py
 
 app_include_js = [
-    "/assets/navigate/js/bread_crumb.js",
-    "/assets/navigate/js/task.js"
+    "/assets/breadcrumb/js/bread_crumb.js",
+    "/assets/breadcrumb/js/task.js"
 ]
 
 # include js, css files in header of web template
